@@ -1,11 +1,37 @@
 from ourmir import Instruction
 
 
+SUPPORTED_DTYPES = {
+    "BOOL",
+    "INT8",
+    "INT16",
+    "INT32",
+    "INT64",
+    "FP16",
+    "BF16",
+    "FP32",
+    "FP64",
+}
+
+
 class Tensor:
-    def __init__(self, tensor_id, dtype="F32", shape=None, device="CPU"):
+    def __init__(
+        self,
+        tensor_id,
+        dtype=None,
+        shape=None,
+        device="CPU",
+    ):
+        if dtype is not None and dtype not in SUPPORTED_DTYPES:
+            raise ValueError(f"Unsupported dtype: {dtype}")
+
         self.tensor_id = tensor_id
         self.dtype = dtype
-        self.shape = tuple(shape) if shape is not None else ()
+        self.shape = (
+            tuple(shape)
+            if shape is not None
+            else None
+        )
         self.device = device
 
     def __repr__(self):
@@ -17,6 +43,7 @@ class Tensor:
             f"device={self.device}"
             f")"
         )
+
 
 class Node:
     def __init__(self, node_id, instruction):
@@ -54,66 +81,129 @@ class Graph:
 
         self.nodes[node.node_id] = node
 
-    def _validate_matmul(self, node):
+    def _get_tensor(self, tensor_id):
+        if tensor_id not in self.tensors:
+            raise ValueError(
+                f"Missing tensor {tensor_id}"
+            )
+
+        return self.tensors[tensor_id]
+
+    def infer_node(self, node):
         instruction = node.instruction
+        opcode = instruction.opcode
 
-        a = self.tensors[instruction.input_a]
-        b = self.tensors[instruction.input_b]
-        output = self.tensors[instruction.output]
+        if opcode == "MATMUL":
+            a = self._get_tensor(instruction.input_a)
+            b = self._get_tensor(instruction.input_b)
 
-        if len(a.shape) != 2 or len(b.shape) != 2:
-            raise ValueError(
-                f"Node {node.node_id}: "
-                "MATMUL currently requires 2D tensors"
+            if a.shape is None or b.shape is None:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    "input shape is unknown"
+                )
+
+            if a.dtype is None or b.dtype is None:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    "input dtype is unknown"
+                )
+
+            if len(a.shape) != 2 or len(b.shape) != 2:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    "MATMUL requires 2D tensors"
+                )
+
+            if a.shape[1] != b.shape[0]:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    f"MATMUL shape mismatch: "
+                    f"{a.shape} x {b.shape}"
+                )
+
+            if a.dtype != b.dtype:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    f"MATMUL dtype mismatch: "
+                    f"{a.dtype} x {b.dtype}"
+                )
+
+            output_shape = (
+                a.shape[0],
+                b.shape[1],
             )
 
-        a_rows, a_cols = a.shape
-        b_rows, b_cols = b.shape
+            output_dtype = a.dtype
 
-        if a_cols != b_rows:
-            raise ValueError(
-                f"Node {node.node_id}: "
-                f"MATMUL shape mismatch: "
-                f"{a.shape} x {b.shape}"
+            output = self._get_tensor(
+                instruction.output
             )
 
-        expected_shape = (a_rows, b_cols)
+            output.shape = output_shape
+            output.dtype = output_dtype
 
-        if output.shape != expected_shape:
-            raise ValueError(
-                f"Node {node.node_id}: "
-                f"invalid output shape: "
-                f"expected {expected_shape}, "
-                f"got {output.shape}"
+            return output
+
+        if opcode in {"ADD", "SUB", "MUL", "DIV"}:
+            a = self._get_tensor(
+                instruction.input_a
             )
+
+            b = self._get_tensor(
+                instruction.input_b
+            )
+
+            if a.shape != b.shape:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    f"shape mismatch: "
+                    f"{a.shape} vs {b.shape}"
+                )
+
+            if a.dtype != b.dtype:
+                raise ValueError(
+                    f"Node {node.node_id}: "
+                    f"dtype mismatch: "
+                    f"{a.dtype} vs {b.dtype}"
+                )
+
+            output = self._get_tensor(
+                instruction.output
+            )
+
+            output.shape = a.shape
+            output.dtype = a.dtype
+
+            return output
+
+        raise ValueError(
+            f"Type inference not implemented "
+            f"for opcode: {opcode}"
+        )
+
+    def infer(self):
+        for node in self.nodes.values():
+            self.infer_node(node)
 
     def validate(self):
         for node in self.nodes.values():
             instruction = node.instruction
 
-            if instruction.input_a != 0:
-                if instruction.input_a not in self.tensors:
-                    raise ValueError(
-                        f"Node {node.node_id}: "
-                        f"missing tensor {instruction.input_a}"
-                    )
+            self._get_tensor(
+                instruction.input_a
+            )
+
+            self._get_tensor(
+                instruction.output
+            )
 
             if instruction.input_b != 0:
-                if instruction.input_b not in self.tensors:
-                    raise ValueError(
-                        f"Node {node.node_id}: "
-                        f"missing tensor {instruction.input_b}"
-                    )
+                self._get_tensor(
+                    instruction.input_b
+                )
 
-            if instruction.output != 0:
-                if instruction.output not in self.tensors:
-                    raise ValueError(
-                        f"Node {node.node_id}: "
-                        f"missing tensor {instruction.output}"
-                    )
-
-            if instruction.opcode == "MATMUL":
-                self._validate_matmul(node)
+        self.infer()
 
         return True
 
@@ -121,9 +211,11 @@ class Graph:
         print(f"GRAPH {self.graph_id}")
 
         print("\nTENSORS")
+
         for tensor in self.tensors.values():
             print(" ", tensor)
 
         print("\nNODES")
+
         for node in self.nodes.values():
             print(" ", node)
