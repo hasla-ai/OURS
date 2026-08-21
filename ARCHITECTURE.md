@@ -100,8 +100,18 @@ EXECUTION PLAN
 1: NODE 2 ADD 3 4 -> 5 [flags=0]
 
 ## OUR-MIR v0.7 — 자체 CPU Runtime
+
 MATMUL, ADD, MUL에 대한 Execution Plan을 받아서 CPU Runtime이 직접 실행함.
 vertical slice: IR → Graph → Execution Plan → 실제 계산함.
 
 이번 단계부터 IR이 실제로 숫자를 계산.
 (`runtime.py`)
+
+## 0.8 Memory Runtime
+Python의 리스트를 Runtime의 핵심 저장소로 사용하지 않는다. CPU/GPU 메모리 모델의 기반
+Tensor -> OUR Memory Manager -> Memory Block -> Raw bytes
+
+()`test_memory.py`)
+b'\x01\x02\x03\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+MEMORY
+  MemoryBlock(address=1, size=16, active=True)
