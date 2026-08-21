@@ -27,11 +27,7 @@ class Tensor:
 
         self.tensor_id = tensor_id
         self.dtype = dtype
-        self.shape = (
-            tuple(shape)
-            if shape is not None
-            else None
-        )
+        self.shape = tuple(shape) if shape is not None else None
         self.device = device
 
     def __repr__(self):
@@ -96,6 +92,7 @@ class Graph:
         if opcode == "MATMUL":
             a = self._get_tensor(instruction.input_a)
             b = self._get_tensor(instruction.input_b)
+            output = self._get_tensor(instruction.output)
 
             if a.shape is None or b.shape is None:
                 raise ValueError(
@@ -129,30 +126,19 @@ class Graph:
                     f"{a.dtype} x {b.dtype}"
                 )
 
-            output_shape = (
+            output.shape = (
                 a.shape[0],
                 b.shape[1],
             )
 
-            output_dtype = a.dtype
-
-            output = self._get_tensor(
-                instruction.output
-            )
-
-            output.shape = output_shape
-            output.dtype = output_dtype
+            output.dtype = a.dtype
 
             return output
 
         if opcode in {"ADD", "SUB", "MUL", "DIV"}:
-            a = self._get_tensor(
-                instruction.input_a
-            )
-
-            b = self._get_tensor(
-                instruction.input_b
-            )
+            a = self._get_tensor(instruction.input_a)
+            b = self._get_tensor(instruction.input_b)
+            output = self._get_tensor(instruction.output)
 
             if a.shape != b.shape:
                 raise ValueError(
@@ -168,10 +154,6 @@ class Graph:
                     f"{a.dtype} vs {b.dtype}"
                 )
 
-            output = self._get_tensor(
-                instruction.output
-            )
-
             output.shape = a.shape
             output.dtype = a.dtype
 
@@ -182,9 +164,84 @@ class Graph:
             f"for opcode: {opcode}"
         )
 
-    def infer(self):
+    def _node_dependencies(self, node):
+        """
+        현재 node가 사용하는 Tensor를
+        어떤 node가 만들어냈는지 찾는다.
+        """
+
+        dependencies = set()
+
+        instruction = node.instruction
+
+        input_ids = [
+            instruction.input_a,
+            instruction.input_b,
+        ]
+
+        for tensor_id in input_ids:
+            if tensor_id == 0:
+                continue
+
+            for other_node in self.nodes.values():
+                if other_node.node_id == node.node_id:
+                    continue
+
+                if (
+                    other_node.instruction.output
+                    == tensor_id
+                ):
+                    dependencies.add(
+                        other_node.node_id
+                    )
+
+        return dependencies
+
+    def topological_sort(self):
+        """
+        Dependency Graph를 분석하여
+        실행 가능한 순서를 반환한다.
+        """
+
+        dependencies = {}
+
         for node in self.nodes.values():
-            self.infer_node(node)
+            dependencies[node.node_id] = (
+                self._node_dependencies(node)
+            )
+
+        result = []
+
+        while dependencies:
+            ready = [
+                node_id
+                for node_id, deps in dependencies.items()
+                if not deps
+            ]
+
+            if not ready:
+                raise ValueError(
+                    "Graph contains a cycle"
+                )
+
+            ready.sort()
+
+            for node_id in ready:
+                result.append(node_id)
+                del dependencies[node_id]
+
+            for deps in dependencies.values():
+                deps.difference_update(ready)
+
+        return result
+
+    def infer(self):
+        execution_order = self.topological_sort()
+
+        for node_id in execution_order:
+            self.infer_node(
+                self.nodes[node_id]
+            )
 
     def validate(self):
         for node in self.nodes.values():
@@ -206,6 +263,20 @@ class Graph:
         self.infer()
 
         return True
+
+    def execution_plan(self):
+        order = self.topological_sort()
+
+        print("EXECUTION PLAN")
+
+        for index, node_id in enumerate(order):
+            print(
+                f"{index}: "
+                f"NODE {node_id} "
+                f"{self.nodes[node_id].instruction}"
+            )
+
+        return order
 
     def dump(self):
         print(f"GRAPH {self.graph_id}")

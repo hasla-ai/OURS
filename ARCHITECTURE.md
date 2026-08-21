@@ -62,3 +62,21 @@ Opcode → Tensor ID → Shape → DType 까지 기계적으로 검증.
 
   (`test.py`) Tensor 3을 직접 정의하지 않았는데 엔진이 추론함.
 
+AI
+ ↓
+IR 생성
+ ↓
+Type Inference
+ ↓
+Shape Inference
+ ↓
+Validation
+ ↓
+실행 기초.
+
+6. OUR-MIR v0.6 — Dependency Graph + Topological Execution
+
+계산 순서 : graph.nodes.values() 순서 -> dependency를 분석해서 N1 → N2 → N3 순서로 재배열.
+
+
+
