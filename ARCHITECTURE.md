@@ -258,3 +258,102 @@ Instruction
                               CPU/GPU
 
                               로 구조 변경.    
+
+## OUR-MIR v1.4 — Variable-Length Instruction / Operand System
+
+## 1) Variable-Length Instruction
+
+Instruction
+├── opcode
+├── operands[]
+├── result[]
+└── attributes{}
+
+즉 
+
+STORE
+  tensor = 17
+  index  = [4, 8, 2]
+  dtype  = FP32
+  value  = 7.5 를 Binary로 직렬화.
+
+OP STORE
+  OPERANDS
+    Operand(tensor, 17)
+    Operand(index, [4, 8, 2])
+    Operand(value, 7.5)
+  RESULTS
+  ATTRIBUTES
+    dtype=FP32
+
+STORE Tensor17[4,8,2] = 7.5 를 IR이 정확하게 표현.
+
+Operand: 계산에 참여하는 값, Tensor, Scalar, Index, Memory
+Attribute: 계산 방법을 설명하는 메타데이터, dtype=FP32, transpose=false, axis=1
+
+를 분리했다.
+
+## 2) Binary Encoding : 
+Binary는 인간이 읽기 어려워도 되지만, 인간이 완전히 해석 불가능해서는 안 된다.
+ - Text IR, Binary IR, Disassembler 항상 같이.
+Binary가 의미를 잃지 않도록 한다.
+
+STORE
+  tensor=17
+  index=[4,8,2]
+  value=7.5
+  dtype=FP32
+
+  -> [TVL Structure: TYPE, LENGTH, VALUE]: 앞으로 Operand 종류가 늘어나도 확장 가능
+
+STORE 라는 의미가 실제 byte sequence로 내려간다.
+
+Human
+  │
+  ▼
+STORE tensor=17 index=[4,8,2]
+  │
+  ▼
+OUR-MIR
+  │
+  ▼
+TLV Binary
+  │
+  ▼
+010101010...
+
+다른 기계는 Binary를 받아 다시:
+
+010101...
+   ↓
+TLV
+   ↓
+IRInstruction
+   ↓
+STORE
+tensor=17
+index=[4,8,2]
+로 복원할 수 있다.
+
+                OUR AI LANGUAGE
+                       │
+                       ▼
+                 OUR-MIR
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+       Opcode       Operand      Attribute
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+                  IR Graph
+                       │
+                       ▼
+                 Binary MIR
+                       │
+                       ▼
+                    Runtime
+                       │
+                       ▼
+                    Memory
+
