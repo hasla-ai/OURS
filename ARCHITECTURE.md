@@ -30,7 +30,25 @@ Tensor 1 ─┐
 Tensor 2 ─┘
 를 기계관리가 가능하다.
 
-OUR-MIR v0.3 — Shape Type System으로 간다.
+3. OUR-MIR v0.3 — Shape Type System으로 간다.
 
 이번에는 기존 코드를 최대한 건드리지 않고 Graph.validate()에 MATMUL의 shape 검증과 출력 shape 추론을 추가.
+
+
+4. OUR-MIR v0.4 — DType Type System
+  - 이번 단계부터는 단순히 shape만 맞는 게 아니라 데이터 타입까지 IR이 검증.
+
+  - 안전한 기계간 프로토콜로 발전하기 시작. F32 × F16 같은 문제까지 잡기 위해 dtype 시스템을 넣는다.
+  - 그 다음에는 ADD, MUL, RESHAPE, TRANSPOSE의 shape/type inference를 추가해서 Tensor 연산 전체를 IR 차원에서 검증함.
+
+  AI가 IR 생성
+       ↓
+   Shape Check
+       ↓
+   Type Check
+       ↓
+ Graph Validation
+       ↓
+     실행
+
 

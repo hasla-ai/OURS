@@ -18,7 +18,6 @@ class Tensor:
             f")"
         )
 
-
 class Node:
     def __init__(self, node_id, instruction):
         self.node_id = node_id
