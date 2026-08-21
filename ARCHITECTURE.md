@@ -357,3 +357,16 @@ index=[4,8,2]
                        ▼
                     Memory
 
+## v1.5 — Binary Decoder + Disassembler.
+기계 A → Binary → 기계 B → 의미 즉 "기계 간 코딩"의 첫 번째 완전한 통신 경로 완성.
+ - binary.py에 Decoder 추가, Disassembler 추가.
+010101010... 을 다시 
+
+STORE
+  tensor=17
+  index=[4,8,2]
+  value=7.5
+  dtype=FP32
+
+로 복원.
+
