@@ -77,6 +77,27 @@ Validation
 6. OUR-MIR v0.6 — Dependency Graph + Topological Execution
 
 계산 순서 : graph.nodes.values() 순서 -> dependency를 분석해서 N1 → N2 → N3 순서로 재배열.
+DAG(Directed Acyclic Graph) 개념 구현.
+
+
+(생성 순서)
+N3 = ADD N1 N2
+N1 = MATMUL A B
+N2 = MUL C D
+
+(dependency 분석)
+N1 ──┐
+     ├──→ N3
+N2 ──┘
+실행 순서를: N1 → N2 → N3로 결정.
+
+NODES
+  Node(id=2, ADD 3 4 -> 5 [flags=0])
+  Node(id=1, MATMUL 1 2 -> 3 [flags=0])
+
+EXECUTION PLAN
+0: NODE 1 MATMUL 1 2 -> 3 [flags=0]
+1: NODE 2 ADD 3 4 -> 5 [flags=0]
 
 
 
