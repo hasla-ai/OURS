@@ -60,5 +60,5 @@ Opcode → Tensor ID → Shape → DType 까지 기계적으로 검증.
   다음부터는 AI가: MATMUL 1 2 → 3만 생성하면 Validator가 자동으로 Tensor 3, shape = [2,4], dtype = FP32
 를 추론하도록.
 
-  
+  (`test.py`) Tensor 3을 직접 정의하지 않았는데 엔진이 추론함.
 
