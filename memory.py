@@ -4,18 +4,32 @@ from tensor import TensorLayout
 
 memory = MemoryManager()
 
-address = memory.allocate(
-    24
-)
+address = memory.allocate(24)
 
 tensor = TensorLayout(
     shape=(2, 3),
     dtype=DType.FP32,
     address=address,
+    memory=memory,
 )
 
 tensor.dump()
 
+address = memory.allocate(24)
+
+tensor.write((0, 0), 1.5)
+tensor.write((0, 1), 2.5)
+tensor.write((1, 2), 7.5)
+
+print(
+    tensor.read((0, 0))
+)
+print(
+    tensor.read((0, 1))
+)
+print(
+    tensor.read((1, 2))
+)
 
 class MemoryBlock:
     def __init__(self, address, size):
@@ -47,7 +61,7 @@ class MemoryManager:
             )
 
         address = self.next_address
-        self.next_address += 1
+        self.next_address += size
 
         block = MemoryBlock(
             address,
@@ -74,20 +88,67 @@ class MemoryManager:
 
         return block
 
-    def write(self, address, data):
-        block = self.get_block(address)
+    def write_at(self, address, data):
+        for block in self.blocks.values():
 
-        if len(data) > block.size:
-            raise ValueError(
-                "Data exceeds allocated memory"
+            start = block.address
+            end = (
+                block.address
+                + block.size
+            )
+            if start <= address < end:
+
+                offset = (
+                    address - start
+                )
+
+                if offset + len(data) > block.size:
+                    raise ValueError(
+                        "Write exceeds memory block"
+                    )
+
+                block.data[
+                    offset:
+                    offset + len(data)
+                ] = data
+
+                return
+
+        raise ValueError(
+            f"Invalid memory address: {address}"
+        )
+
+
+    def read_at(self, address, size):
+        for block in self.blocks.values():
+
+            start = block.address
+            end = (
+                block.address
+                + block.size
             )
 
-        block.data[:len(data)] = data
+            if start <= address < end:
 
-    def read(self, address):
-        block = self.get_block(address)
+                offset = (
+                    address - start
+                )
 
-        return bytes(block.data)
+                if offset + size > block.size:
+                    raise ValueError(
+                        "Read exceeds memory block"
+                    )
+
+                return bytes(
+                    block.data[
+                        offset:
+                        offset + size
+                    ]
+                )
+
+        raise ValueError(
+            f"Invalid memory address: {address}"
+        )
 
     def free(self, address):
         block = self.get_block(address)

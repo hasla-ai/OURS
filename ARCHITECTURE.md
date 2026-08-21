@@ -192,6 +192,8 @@ Tensor              -> address = 0x1000, [0x1000  FP32, 0x1004  FP32, 0x1008  FP
 shape = [2,3]                            [0x100C  FP32, 0x1010  FP32, 0x1014  FP32]
 dtype = FP32
 
+실제 연속 메모리 레이아웃으로 정의.
+
 Tensor[0,0] → 0x1000
 Tensor[0,1] → 0x1004
 Tensor[0,2] → 0x1008
@@ -200,8 +202,13 @@ Tensor[1,0] → 0x100C
 Tensor[1,1] → 0x1010
 Tensor[1,2] → 0x1014
 
-실제 연속 메모리 레이아웃으로 정의.
+## OUR Runtime v1.2 — Tensor Read/Write
+  인간이 코딩하는 것이 아니라 기계와 기계가 서로 계산 프로그램을 생성하고 교환한다는 방향의 기반
 
+tensor[1, 2] = 7.5
+기존 TensorLayout에 메모리 연결과 원소 단위 read/write를 추가
 
+tensor.write((1,2), 7.5) -> offset (1 × 3 + 2= 5) -> 5 × 4 bytes= 20
+-> 0x1000 + 20= 0x1014 -> FP32 encode(7.5) -> 4 bytes -> Memory[0x1014:0x1018]
 
-
+읽을 때 역방향으로: Memory -> 4 bytes -> FP32 decode -> 7.5

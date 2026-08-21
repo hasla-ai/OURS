@@ -1,4 +1,4 @@
-from dtype import dtype_size, dtype_name, DType
+from dtype import dtype_size, dtype_name, DType, Codec
 
 class TensorLayout:
 
@@ -7,6 +7,7 @@ class TensorLayout:
         shape,
         dtype,
         address=0,
+        memory=None,
     ):
         if not shape:
             raise ValueError(
@@ -22,21 +23,19 @@ class TensorLayout:
         self.shape = tuple(shape)
         self.dtype = dtype
         self.address = address
+        self.memory = memory
+        self.codec = Codec()
 
         self.strides = self._calculate_strides()
 
     def _calculate_strides(self):
         """
         Row-major / C-order layout
-
         shape [2,3,4]
-
         strides:
         [12,4,1]
         """
-
         strides = [0] * len(self.shape)
-
         stride = 1
 
         for i in range(
@@ -102,40 +101,60 @@ class TensorLayout:
 
         return self.address + byte_offset
 
+
+    def write(self, indices, value):
+        if self.memory is None:
+            raise ValueError(
+                "Tensor has no memory"
+            )
+
+        raw = self.codec.encode(
+            self.dtype,
+            value,
+        )
+
+        address = self.address_of(
+            indices
+        )
+
+        self.memory.write_at(
+            address,
+            raw,
+        )
+
+    def read(self, indices):
+        if self.memory is None:
+            raise ValueError(
+                "Tensor has no memory"
+            )
+
+        address = self.address_of(
+            indices
+        )
+
+        size = dtype_size(
+            self.dtype
+        )
+
+        raw = self.memory.read_at(
+            address,
+            size,
+        )
+
+        return self.codec.decode(
+            self.dtype,
+            raw,
+        )
+    
     def dump(self):
 
         print("TENSOR LAYOUT")
-
-        print(
-            "shape:",
-            self.shape,
-        )
-
-        print(
-            "dtype:",
-            dtype_name(self.dtype),
-        )
-
-        print(
-            "address:",
-            hex(self.address),
-        )
-
-        print(
-            "strides:",
-            self.strides,
-        )
-
-        print(
-            "elements:",
-            self.num_elements(),
-        )
-
-        print(
-            "bytes:",
-            self.nbytes(),
-        )
-
+        print("shape:", self.shape)
+        print("dtype:", dtype_name(self.dtype))
+        print("address:", hex(self.address))
+        print("strides:", self.strides)
+        print("elements:", self.num_elements())
+        print("bytes:", self.nbytes())
 
 #2D and N -dimension Tensor
 
