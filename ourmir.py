@@ -21,6 +21,9 @@ OPCODES = {
     "COPY": 0b00001100,
     "ALLOC": 0b00001101,
     "FREE": 0b00001110,
+        # Memory
+    "LOAD": 0x0F,
+    "STORE": 0x10,
 }
 
 OPCODE_NAMES = {value: key for key, value in OPCODES.items()}

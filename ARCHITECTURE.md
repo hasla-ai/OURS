@@ -212,3 +212,49 @@ tensor.write((1,2), 7.5) -> offset (1 × 3 + 2= 5) -> 5 × 4 bytes= 20
 -> 0x1000 + 20= 0x1014 -> FP32 encode(7.5) -> 4 bytes -> Memory[0x1014:0x1018]
 
 읽을 때 역방향으로: Memory -> 4 bytes -> FP32 decode -> 7.5
+
+## OUR-MIR v1.3 — LOAD / STORE Instruction
+
+tensor.read() / tensor.write() 대신 메모리 접근도
+ - LOAD : LOAD memory → register/tensor
+ - STORE : STORE value → memory
+
+단, 현재 Instruction 포맷을 그대로 활용.
+64 bit
+[ OPCODE ][ A ][ B ][ OUTPUT ][ FLAGS ]
+   8       16   16      16        8
+
+LOAD 10 → 20    => input_a = 10, output  = 20
+
+Human / AI -> OUR-MIR -> LOAD / STORE -> Runtime -> Memory
+
+TensorValue 가 tensor_id, address, size 이므로 
+LOAD/STORE가 어떤 원소를 대상으로 하는지 표현할 수 없으므로, 
+
+Instruction
+    │
+    ├── opcode
+    ├── dtype
+    ├── operands[]
+    └── attributes{}
+
+    64bit 부족하므로 가변 길이 IR로 설계변경. 
+
+                   OUR Language
+                        │
+                        ↓
+                  OUR-MIR Graph
+                        │
+              ┌─────────┴─────────┐
+              ↓                   ↓
+         Human-readable       Binary MIR
+              │                   │
+              │                   ↓
+              │              Lowering
+              │                   │
+              └──────────────→ Machine IR
+                                  │
+                                  ↓
+                              CPU/GPU
+
+                              로 구조 변경.    

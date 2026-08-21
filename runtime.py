@@ -1,6 +1,5 @@
 from memory import MemoryManager
 
-
 class TensorValue:
 
     def __init__(
@@ -21,7 +20,6 @@ class TensorValue:
             f"size={self.size}"
             f")"
         )
-
 
 class CPURuntime:
 
@@ -91,3 +89,49 @@ class CPURuntime:
 
     def dump_memory(self):
         self.memory.dump()
+
+    def execute_node(self, node):
+
+        instruction = node.instruction
+        opcode = instruction.opcode
+
+        if opcode == "LOAD":
+
+            source = self.get_tensor(
+                instruction.input_a
+            )
+
+            self.values[
+                instruction.output
+            ] = TensorValue(
+                instruction.output,
+                source.address,
+                source.size,
+            )
+
+            return
+
+        if opcode == "STORE":
+
+            source = self.get_tensor(
+                instruction.input_a
+            )
+
+            destination = self.get_tensor(
+                instruction.output
+            )
+
+            data = self.memory.read(
+                source.address
+            )
+
+            self.memory.write(
+                destination.address,
+                data,
+            )
+
+            return
+
+        raise ValueError(
+            f"Unsupported opcode: {opcode}"
+        )
