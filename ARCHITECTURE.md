@@ -107,7 +107,7 @@ vertical slice: IR → Graph → Execution Plan → 실제 계산함.
 이번 단계부터 IR이 실제로 숫자를 계산.
 (`runtime.py`)
 
-## 0.8 Memory Runtime
+## v 0.8 Memory Runtime
 Python의 리스트를 Runtime의 핵심 저장소로 사용하지 않는다. CPU/GPU 메모리 모델의 기반
 Tensor -> OUR Memory Manager -> Memory Block -> Raw bytes
 
@@ -115,3 +115,24 @@ Tensor -> OUR Memory Manager -> Memory Block -> Raw bytes
 b'\x01\x02\x03\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
 MEMORY
   MemoryBlock(address=1, size=16, active=True)
+
+## OUR-MIR v0.9 — 자체 DType Encoding
+
+## <실제 데이터 표현 규칙>
+## Tensor -> FP32 -> 32-bit representation -> 4 bytes -> Memory
+
+Runtime이 IEEE-754 비트 구조로 직접 encode/decode : INT32, FP16, BF16, FP32
+FP32 -> 32 bits -> Memory bytes. 
+
+IR -> Tensor -> DType -> Raw Memory -> CPU Operation
+Tensor → Python float / Python list 의존도 탈출.
+
+(`dtype.py`)
+
+test (`test_dtype.py`)
+
+0.0 -> 00000000 -> 0.0
+1.0 -> 0000803f -> 1.0
+-1.0 -> 000080bf -> -1.0
+2.5 -> 00002040 -> 2.5
+10.0 -> 00002041 -> 10.0
