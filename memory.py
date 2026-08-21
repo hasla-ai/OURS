@@ -1,3 +1,22 @@
+from memory import MemoryManager
+from dtype import DType
+from tensor import TensorLayout
+
+memory = MemoryManager()
+
+address = memory.allocate(
+    24
+)
+
+tensor = TensorLayout(
+    shape=(2, 3),
+    dtype=DType.FP32,
+    address=address,
+)
+
+tensor.dump()
+
+
 class MemoryBlock:
     def __init__(self, address, size):
         self.address = address

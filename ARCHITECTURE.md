@@ -151,3 +151,57 @@ INT32 100000 -> a0860100 -> 100000
 FP32 1.0 -> 0000803f -> 1.0
 FP32 3.14 -> c2f54840 -> 3.1399998664855957
 
+## v1.1 — Tensor Memory Layout
+ - Tensor를 메모리 관점에서 완전히 정의.
+ Tensor
+ ├── dtype
+ ├── shape
+ ├── strides
+ ├── address
+ └── nbytes
+
+ Tensor[1, 2] -> base_address + offset.
+
+ TENSOR LAYOUT: Tensor = metadata + memory region.
+ - GPU로 가도 그대로 유지
+ - CPU, GPU, NPU, TPU 동일한 Tensor/IR 추상화 아래에서 관리
+
+              Tensor
+                │
+       ┌────────┼────────┐
+       ↓        ↓        ↓
+     Shape    DType    Address
+       │        │        │
+       └────────┼────────┘
+                ↓
+         Memory Manager
+                ↓
+           Raw Bytes
+
+shape: (2, 3)
+dtype: FP32
+address: 0x1000
+strides: (3, 1)
+elements: 6
+bytes: 24
+
+-> FP32 = 4 bytes
+6 elements × 4 = 24 bytes
+ 
+Tensor              -> address = 0x1000, [0x1000  FP32, 0x1004  FP32, 0x1008  FP32]
+shape = [2,3]                            [0x100C  FP32, 0x1010  FP32, 0x1014  FP32]
+dtype = FP32
+
+Tensor[0,0] → 0x1000
+Tensor[0,1] → 0x1004
+Tensor[0,2] → 0x1008
+
+Tensor[1,0] → 0x100C
+Tensor[1,1] → 0x1010
+Tensor[1,2] → 0x1014
+
+실제 연속 메모리 레이아웃으로 정의.
+
+
+
+
